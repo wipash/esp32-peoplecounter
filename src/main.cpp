@@ -1,12 +1,11 @@
-#include "Arduino.h"
-#include "heltec.h"
-#include "WiFi.h"
-#include "SimpleTimer.h"
+#include <Arduino.h>
+#include <heltec.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
 
 #include "config.h"
 
-#include "WiFiClientSecure.h"
-#include "BlynkSimpleEsp32_SSL.h"
+#include <BlynkSimpleEsp32.h>
 
 int count_in = 0;
 int count_out = 0;
@@ -22,7 +21,7 @@ bool outbound = false;
 
 unsigned long tm;
 
-SimpleTimer timer;
+BlynkTimer timer;
 
 void drawScreen()
 {
@@ -102,6 +101,12 @@ void checkSensors()
   drawScreen();
 }
 
+void blynkUpload()
+{
+  Blynk.virtualWrite(V0, count_in);
+  Blynk.virtualWrite(V1, count_out);
+}
+
 void setup()
 {
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
@@ -114,27 +119,21 @@ void setup()
   Heltec.display->drawString(0, 10, WIFISSID);
   Heltec.display->display();
 
-  Serial.print("Connecting to WiFi SSID: ");
-  Serial.println(WIFISSID);
-
-  WiFi.begin(WIFISSID, WIFIPWD);
-  while (WiFi.status() != WL_CONNECTED)
+  Blynk.begin(BLYNK_AUTH, WIFISSID, WIFIPWD);
+  while (Blynk.connected() == false)
   {
-    delay(500);
-    Serial.println("...");
   }
-
-  Serial.println("Connected to WiFi!");
-  Serial.print("Local IP: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("Blynk Connected");
 
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
 
-  timer.setInterval(10, checkSensors);
+  timer.setInterval(2000L, blynkUpload);
+  timer.setInterval(10L, checkSensors);
 }
 
 void loop()
 {
   timer.run();
+  Blynk.run();
 }

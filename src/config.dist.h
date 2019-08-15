@@ -14,3 +14,4 @@
 
 // Blynk
 #define BLYNK_AUTH ""
+#define BLYNK_PRINT Serial
