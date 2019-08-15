@@ -11,3 +11,6 @@
 
 // Timeout
 #define TIMEOUT 1500
+
+// Blynk
+#define BLYNK_AUTH ""

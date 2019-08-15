@@ -5,6 +5,9 @@
 
 #include "config.h"
 
+#include "WiFiClientSecure.h"
+#include "BlynkSimpleEsp32_SSL.h"
+
 int count_in = 0;
 int count_out = 0;
 
