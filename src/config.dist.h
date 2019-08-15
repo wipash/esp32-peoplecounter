@@ -6,5 +6,8 @@
 #define UTCOFFSET -5
 
 // Pin connections
-#define left_sensor 17
-#define right_sensor 23
+#define LEFT_SENSOR_PIN 17
+#define RIGHT_SENSOR_PIN 23
+
+// Timeout
+#define TIMEOUT 1500
