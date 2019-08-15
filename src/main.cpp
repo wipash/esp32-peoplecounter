@@ -19,8 +19,6 @@ bool outbound = false;
 
 unsigned long tm;
 
-bool counting = false;
-
 SimpleTimer timer;
 
 void drawScreen()
@@ -108,14 +106,24 @@ void setup()
   Heltec.display->flipScreenVertically();
   Heltec.display->setFont(ArialMT_Plain_10);
 
+  Heltec.display->clear();
+  Heltec.display->drawString(0, 0, "Connecting to WiFi SSID:");
+  Heltec.display->drawString(0, 10, WIFISSID);
+  Heltec.display->display();
+
+  Serial.print("Connecting to WiFi SSID: ");
+  Serial.println(WIFISSID);
+
   WiFi.begin(WIFISSID, WIFIPWD);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.println("Connecting to WiFi..");
+    Serial.println("...");
   }
 
-  Serial.println("Connected to the WiFi network");
+  Serial.println("Connected to WiFi!");
+  Serial.print("Local IP: ");
+  Serial.println(WiFi.localIP());
 
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
