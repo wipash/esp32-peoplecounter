@@ -1,18 +1,28 @@
 #include "Arduino.h"
 #include "heltec.h"
+#include "WiFi.h"
 
-#define left_sensor 17
-#define right_sensor 23
+#include "config.h"
 
 int count_in = 0;
 int count_out = 0;
 bool counting = false;
 
 void setup() {
+  Serial.begin(115200);
+
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
 
   Heltec.display->flipScreenVertically();
   Heltec.display->setFont(ArialMT_Plain_10);
+
+  WiFi.begin(WIFISSID, WIFIPWD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  }
+
+  Serial.println("Connected to the WiFi network");
 
   pinMode(left_sensor, INPUT);
   pinMode(right_sensor, INPUT);
