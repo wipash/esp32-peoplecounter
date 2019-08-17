@@ -1,9 +1,18 @@
-#include "Arduino.h"
-#include "heltec.h"
-#include "WiFi.h"
-#include "SimpleTimer.h"
+#include <Arduino.h>
+#include <heltec.h>
+#include <WiFi.h>
+#include <SimpleTimer.h>
 
 #include "config.h"
+
+#include <Esp32MQTTClient.h>
+#include <ArduinoJson.h>
+
+static const char *connectionString = "HostName=iotc-084a5953-00a4-4d23-a83b-4e38c8b54144.azure-devices.net;DeviceId=792c7d0f-61a4-4d2b-836d-427381eefea6;SharedAccessKey=0r3LmrgzJmNQTF1bUylbFp6wDwVDrKSJErcBzhKgWPA=";
+
+// Global Vars
+
+static bool hasIoTHub = false;
 
 int count_in = 0;
 int count_out = 0;
@@ -99,6 +108,31 @@ void checkSensors()
   drawScreen();
 }
 
+void sendTelemetry()
+{
+  if (hasIoTHub){
+    DynamicJsonDocument root(MAX_MESSAGE_LEN);
+    root["people_in"] = count_in;
+    root["people_out"] = count_out;
+
+    char buff[MAX_MESSAGE_LEN];
+    serializeJson(root, buff);
+    Serial.println(buff);
+    if (Esp32MQTTClient_SendEvent(buff))
+    {
+      Serial.println("Sending data succeed");
+      count_in = 0;
+      count_out = 0;
+    }
+    else
+    {
+      Serial.println("Failure...");
+    }
+
+
+  }
+}
+
 void setup()
 {
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
@@ -125,10 +159,21 @@ void setup()
   Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
 
+  if (!Esp32MQTTClient_Init((const uint8_t *)connectionString))
+  {
+    hasIoTHub = false;
+    Serial.println("Initializing IoT hub failed.");
+    return;
+  }
+
+  // Signal iot hub connected
+  hasIoTHub = true;
+
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
 
   timer.setInterval(10, checkSensors);
+  timer.setInterval(30000, sendTelemetry);
 }
 
 void loop()

@@ -1,3 +1,6 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
 // WiFi details
 #define WIFISSID ""
 #define WIFIPWD  ""
@@ -11,3 +14,7 @@
 
 // Timeout
 #define TIMEOUT 1500
+
+#define MAX_MESSAGE_LEN 1024
+
+#endif /* CONFIG_H */
