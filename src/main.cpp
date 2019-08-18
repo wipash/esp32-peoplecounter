@@ -1,25 +1,35 @@
-#include "Arduino.h"
-#include "heltec.h"
-#include "WiFi.h"
-#include "SimpleTimer.h"
+#include <Arduino.h>
+#include <heltec.h>
+#include <WiFi.h>
+#include <SimpleTimer.h>
 
 #include "config.h"
 
-int count_in = 0;
-int count_out = 0;
+#include <Esp32MQTTClient.h>
+#include <ArduinoJson.h>
 
-int left_sensor_state = 0;
-int right_sensor_state = 0;
+// Global Vars
 
-int left_sensor_state_last = -1;
-int right_sensor_state_last = -1;
+static bool hasIoTHub;
 
-bool inbound = false;
-bool outbound = false;
+static uint32_t count_in;
+static uint32_t count_out;
 
-unsigned long tm;
+static uint32_t total_count_in;
+static uint32_t total_count_out;
 
-SimpleTimer timer;
+static uint8_t left_sensor_state;
+static uint8_t right_sensor_state;
+
+static int8_t left_sensor_state_last = -1;
+static int8_t right_sensor_state_last = -1;
+
+static bool inbound;
+static bool outbound;
+
+static uint32_t tm;
+
+static SimpleTimer timer;
 
 void drawScreen()
 {
@@ -38,10 +48,10 @@ void drawScreen()
   Heltec.display->fillRect(44, 22, 40, 20);
   Heltec.display->setColor(WHITE);
   Heltec.display->drawString(44, 22, "In:");
-  Heltec.display->drawString(65, 22, String(count_in));
+  Heltec.display->drawString(65, 22, String(total_count_in));
 
   Heltec.display->drawString(44, 32, "Out:");
-  Heltec.display->drawString(65, 32, String(count_out));
+  Heltec.display->drawString(65, 32, String(total_count_out));
   Heltec.display->display();
 }
 
@@ -60,7 +70,9 @@ void checkIn()
   if ((inbound == true) && (left_sensor_state == HIGH) && (right_sensor_state == LOW))
   {
     inbound = false;
+    outbound = false;
     count_in++;
+    total_count_in++;
     Serial.println("count_in");
   }
 }
@@ -79,8 +91,10 @@ void checkOut()
 
   if ((outbound == true) && (right_sensor_state == HIGH) && (left_sensor_state == LOW))
   {
+    inbound = false;
     outbound = false;
     count_out++;
+    total_count_out++;
     Serial.println("count_out");
   }
 }
@@ -91,12 +105,37 @@ void checkSensors()
   right_sensor_state = digitalRead(RIGHT_SENSOR_PIN);
   checkIn();
   checkOut();
-  if ((millis() - tm) > TIMEOUT)
+  if (((millis() - tm) > TIMEOUT) && (right_sensor_state == HIGH) && (left_sensor_state == HIGH))
   {
     inbound = false;
     outbound = false;
   }
   drawScreen();
+}
+
+void sendTelemetry()
+{
+  if (hasIoTHub){
+    DynamicJsonDocument root(MAX_MESSAGE_LEN);
+    root["people_in"] = count_in;
+    root["people_out"] = count_out;
+
+    char buff[MAX_MESSAGE_LEN];
+    serializeJson(root, buff);
+    Serial.println(buff);
+    if (Esp32MQTTClient_SendEvent(buff))
+    {
+      Serial.println("Sending data succeed");
+      count_in = 0;
+      count_out = 0;
+    }
+    else
+    {
+      Serial.println("Failure...");
+    }
+
+
+  }
 }
 
 void setup()
@@ -125,10 +164,24 @@ void setup()
   Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
 
+  Heltec.display->clear();
+  Heltec.display->drawString(0, 0, "Connecting to Auzre IoTC");
+  Heltec.display->display();
+  if (!Esp32MQTTClient_Init((const uint8_t *)IOTC_CONNECTION_STRING))
+  {
+    hasIoTHub = false;
+    Serial.println("Initializing IoT hub failed.");
+    return;
+  }
+
+  // Signal iot hub connected
+  hasIoTHub = true;
+
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
 
   timer.setInterval(10, checkSensors);
+  timer.setInterval(UPLOAD_INTERVAL, sendTelemetry);
 }
 
 void loop()
