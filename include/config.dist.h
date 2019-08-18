@@ -15,6 +15,9 @@
 // Timeout
 #define TIMEOUT 1500
 
+// Azure IoT Central
+#define UPLOAD_INTERVAL 30000
 #define MAX_MESSAGE_LEN 1024
+#define IOTC_CONNECTION_STRING ""
 
 #endif /* CONFIG_H */
