@@ -115,7 +115,10 @@ void checkSensors()
 
 void sendTelemetry()
 {
-  if (hasIoTHub){
+  if (hasIoTHub)
+  {
+    uint32_t telemetry_tm = millis();
+    Serial.println("Beginning upload");
     DynamicJsonDocument root(MAX_MESSAGE_LEN);
     root["people_in"] = count_in;
     root["people_out"] = count_out;
@@ -133,8 +136,8 @@ void sendTelemetry()
     {
       Serial.println("Failure...");
     }
-
-
+    Serial.print("Upload process duration: ");
+    Serial.println(millis() - telemetry_tm);
   }
 }
 
