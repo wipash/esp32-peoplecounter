@@ -21,13 +21,7 @@ static uint32_t total_count_out;
 static uint8_t left_sensor_state;
 static uint8_t right_sensor_state;
 
-static int8_t left_sensor_state_last = -1;
-static int8_t right_sensor_state_last = -1;
-
-static bool inbound;
-static bool outbound;
-
-static uint32_t tm;
+bool counting = false;
 
 static SimpleTimer timer;
 
@@ -57,61 +51,32 @@ void drawScreen()
   Heltec.display->display();
 }
 
-void checkIn()
-{
-  if (left_sensor_state_last != left_sensor_state)
-  {
-    left_sensor_state_last = left_sensor_state;
-    if ((inbound == false) && (left_sensor_state == LOW) && (right_sensor_state == HIGH))
-    {
-      inbound = true;
-      tm = millis();
-    }
-  }
-
-  if ((inbound == true) && (left_sensor_state == HIGH) && (right_sensor_state == LOW))
-  {
-    inbound = false;
-    outbound = false;
-    count_in++;
-    total_count_in++;
-    Serial.println("count_in");
-  }
-}
-
-void checkOut()
-{
-  if (right_sensor_state_last != right_sensor_state)
-  {
-    right_sensor_state_last = right_sensor_state;
-    if ((outbound == false) && (right_sensor_state == LOW) && (left_sensor_state == HIGH))
-    {
-      outbound = true;
-      tm = millis();
-    }
-  }
-
-  if ((outbound == true) && (right_sensor_state == HIGH) && (left_sensor_state == LOW))
-  {
-    inbound = false;
-    outbound = false;
-    count_out++;
-    total_count_out++;
-    Serial.println("count_out");
-  }
-}
-
 void checkSensors()
 {
   left_sensor_state = digitalRead(LEFT_SENSOR_PIN);
   right_sensor_state = digitalRead(RIGHT_SENSOR_PIN);
-  checkIn();
-  checkOut();
-  if (((millis() - tm) > TIMEOUT) && (right_sensor_state == HIGH) && (left_sensor_state == HIGH))
+
+  if (left_sensor_state == LOW && right_sensor_state == HIGH && counting == false)
   {
-    inbound = false;
-    outbound = false;
+    count_in++;
+    total_count_in++;
+    counting = true;
+    Serial.println("count_in");
   }
+
+  if (left_sensor_state == HIGH && right_sensor_state == LOW && counting == false)
+  {
+    count_out++;
+    total_count_out++;
+    counting = true;
+    Serial.println("count_out");
+  }
+
+  if (left_sensor_state == HIGH && right_sensor_state == HIGH && counting == true)
+  {
+    counting = false;
+  }
+
   drawScreen();
 }
 
