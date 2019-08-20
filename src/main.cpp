@@ -33,6 +33,48 @@ static SimpleTimer timer;
 
 TaskHandle_t telemetryTaskHandle;
 
+void wifiConnect()
+{
+  WiFi.disconnect();
+
+  Heltec.display->clear();
+  Heltec.display->drawString(0, 0, "Connecting to WiFi SSID:");
+  Heltec.display->drawString(0, 10, WIFISSID);
+  Heltec.display->display();
+
+  Serial.print("Connecting to WiFi SSID: ");
+  Serial.println(WIFISSID);
+
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.begin(WIFISSID, WIFIPWD);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.println("...");
+  }
+
+  Serial.println("Connected to WiFi!");
+  Serial.print("Local IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void iotcConnect()
+{
+  Heltec.display->clear();
+  Heltec.display->drawString(0, 0, "Connecting to Azure IoTC");
+  Heltec.display->display();
+  if (!Esp32MQTTClient_Init((const uint8_t *)IOTC_CONNECTION_STRING))
+  {
+    hasIoTHub = false;
+    Serial.println("Initializing IoT hub failed.");
+    return;
+  }
+
+  // Signal iot hub connected
+  hasIoTHub = true;
+  digitalWrite(BUILTIN_LED, HIGH);
+}
+
 void drawScreen()
 {
   Heltec.display->clear();
@@ -162,37 +204,8 @@ void setup()
   Heltec.display->flipScreenVertically();
   Heltec.display->setFont(ArialMT_Plain_10);
 
-  Heltec.display->clear();
-  Heltec.display->drawString(0, 0, "Connecting to WiFi SSID:");
-  Heltec.display->drawString(0, 10, WIFISSID);
-  Heltec.display->display();
-
-  Serial.print("Connecting to WiFi SSID: ");
-  Serial.println(WIFISSID);
-
-  WiFi.begin(WIFISSID, WIFIPWD);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.println("...");
-  }
-
-  Serial.println("Connected to WiFi!");
-  Serial.print("Local IP: ");
-  Serial.println(WiFi.localIP());
-
-  Heltec.display->clear();
-  Heltec.display->drawString(0, 0, "Connecting to Auzre IoTC");
-  Heltec.display->display();
-  if (!Esp32MQTTClient_Init((const uint8_t *)IOTC_CONNECTION_STRING))
-  {
-    hasIoTHub = false;
-    Serial.println("Initializing IoT hub failed.");
-    return;
-  }
-
-  // Signal iot hub connected
-  hasIoTHub = true;
+  wifiConnect();
+  iotcConnect();
 
   pinMode(LEFT_SENSOR_PIN, INPUT);
   pinMode(RIGHT_SENSOR_PIN, INPUT);
