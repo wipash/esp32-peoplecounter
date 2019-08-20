@@ -31,10 +31,12 @@ static uint32_t tm;
 
 static SimpleTimer timer;
 
-TaskHandle_t telemetryTaskHandle;
+static TaskHandle_t telemetryTaskHandle;
 
 void wifiConnect()
 {
+  uint32_t wifi_start_tm = millis();
+
   WiFi.disconnect();
 
   Heltec.display->clear();
@@ -51,6 +53,14 @@ void wifiConnect()
   {
     delay(500);
     Serial.println("...");
+    if (millis() - wifi_start_tm > 10000)
+    {
+      Serial.println("No connection, retrying");
+      WiFi.disconnect();
+      WiFi.mode(WIFI_AP_STA);
+      wifi_start_tm = millis();
+      WiFi.begin(WIFISSID, WIFIPWD);
+    }
   }
 
   Serial.println("Connected to WiFi!");
@@ -159,6 +169,11 @@ void checkSensors()
 
 void sendTelemetry(void *parameter)
 {
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    // Brute force restart if not connected to WiFi
+    ESP.restart();
+  }
   if (hasIoTHub)
   {
     uint32_t telemetry_tm = millis();
@@ -200,6 +215,9 @@ void telemetryTask()
 void setup()
 {
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
+
+  // Turn off connection state LED
+  digitalWrite(BUILTIN_LED, LOW);
 
   Heltec.display->flipScreenVertically();
   Heltec.display->setFont(ArialMT_Plain_10);
