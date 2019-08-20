@@ -31,6 +31,8 @@ static uint32_t tm;
 
 static SimpleTimer timer;
 
+TaskHandle_t telemetryTaskHandle;
+
 void drawScreen()
 {
   Heltec.display->clear();
@@ -113,7 +115,7 @@ void checkSensors()
   drawScreen();
 }
 
-void sendTelemetry()
+void sendTelemetry(void *parameter)
 {
   if (hasIoTHub)
   {
@@ -139,6 +141,18 @@ void sendTelemetry()
     Serial.print("Upload process duration: ");
     Serial.println(millis() - telemetry_tm);
   }
+  vTaskDelete(telemetryTaskHandle);
+}
+
+void telemetryTask()
+{
+  xTaskCreate(
+      sendTelemetry,
+      "sendTelemetry",
+      4096,
+      NULL,
+      1,
+      &telemetryTaskHandle);
 }
 
 void setup()
@@ -184,7 +198,7 @@ void setup()
   pinMode(RIGHT_SENSOR_PIN, INPUT);
 
   timer.setInterval(10, checkSensors);
-  timer.setInterval(UPLOAD_INTERVAL, sendTelemetry);
+  timer.setInterval(UPLOAD_INTERVAL, telemetryTask);
 }
 
 void loop()
